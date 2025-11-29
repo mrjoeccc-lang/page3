@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>내가 상대에게 주는 첫인상 테스트</title>
+
+<style>
+    body {
+        margin: 0;
+        font-family: 'Pretendard', sans-serif;
+        background: #ffffff;
+        color: #222;
+        transition: 0.4s;
+        overflow-x: hidden;
+    }
+
+    /* 로딩 화면 */
+    #loadingScreen {
+        position: fixed;
+        top:0; left:0;
+        width:100%; height:100%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background:#ffffff;
+        z-index:9999;
+        font-size:22px;
+        color:#555;
+        flex-direction: column;
+    }
+    .loader {
+        border: 4px solid #f0f0f0;
+        border-top: 4px solid #000;
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 15px;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* 컨테이너 */
+    .container {
+        max-width: 500px;
+        margin: 50px auto;
+        padding: 20px;
+    }
+
+    h1 {
+        text-align: center;
+        font-size: 26px;
+        margin-bottom: 20px;
+        font-weight: 700;
+    }
+
+    /* 질문 카드 */
+    .question-card {
+        background: #fff;
+        padding: 20px;
+        border-radius: 20px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+        display: none;
+        animation: fade 0.5s ease;
+    }
+
+    @keyframes fade { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:translateY(0);} }
+
+    .option {
+        padding: 13px;
+        background: #f7f7f7;
+        border-radius: 12px;
+        margin-top: 10px;
+        cursor: pointer;
+        border: 1px solid #eee;
+        transition: 0.2s;
+    }
+    .option:hover {
+        background: #efefef;
+    }
+
+    /* 결과 화면 */
+    #resultCard {
+        display:none;
+        background:#fff;
+        padding:25px;
+        border-radius:20px;
+        margin-top:20px;
+        box-shadow:0 6px 20px rgba(0,0,0,0.08);
+        animation: fade 0.4s ease;
+    }
+
+    #resultTitle {
+        font-size:23px;
+        margin-bottom:10px;
+        font-weight:600;
+    }
+
+    #resultDesc {
+        line-height:1.6;
+        font-size:15px;
+        margin-top:15px;
+    }
+
+    /* 버튼 */
+    .btn {
+        width:100%;
+        padding:14px;
+        border:none;
+        background:#111;
+        color:#fff;
+        border-radius:14px;
+        margin-top:15px;
+        cursor:pointer;
+        font-size:16px;
+        transition:0.2s;
+    }
+    .btn:hover { background:#333; }
+
+    /* 캡쳐 영역 */
+    #captureArea {
+        background:white;
+        padding:25px;
+        border-radius:18px;
+        margin-top:20px;
+        display:none;
+    }
+
+</style>
+
+</head>
+<body>
+
+<!-- 로딩화면 -->
+<div id="loadingScreen">
+    <div class="loader"></div>
+    로딩중...
+</div>
+
+<div class="container">
+    <h1>내가 상대에게 주는 첫인상 테스트</h1>
+
+    <div id="questionContainer"></div>
+
+    <div id="resultCard">
+        <div id="resultTitle"></div>
+        <div id="resultDesc"></div>
+
+        <button class="btn" onclick="restart()">다시 테스트하기</button>
+        <button class="btn" onclick="captureResult()">결과 이미지 저장</button>
+
+        <div style="height:15px;"></div>
+
+        <div id="captureArea"></div>
+    </div>
+</div>
+
+<!-- html2canvas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+let current = 0;
+let score = { A:0, B:0, C:0, D:0 };
+
+const questions = [
+    {
+        q: "처음 보는 사람이 가장 많이 하는 말은?",
+        A: "착해 보인다",
+        B: "자신감 있어 보인다",
+        C: "분석적이다",
+        D: "시크하다"
+    },
+    {
+        q: "초면에 당신은 어떤 자세인가?",
+        A: "부드럽고 조심스러움",
+        B: "또렷하고 당당함",
+        C: "관찰하며 판단함",
+        D: "차분하고 말이 적음"
+    },
+    {
+        q: "상대가 먼저 어떤 사람으로 느낀다고 할까?",
+        A: "편안함",
+        B: "에너지 넘침",
+        C: "똑똑함",
+        D: "미스터리함"
+    },
+    {
+        q: "처음 만났을 때 표정은?",
+        A: "친절 미소",
+        B: "자신감 있는 표정",
+        C: "가벼운 경계·분석",
+        D: "무표정·차분"
+    },
+    {
+        q: "초반 대화 스타일은?",
+        A: "배려 중심",
+        B: "리드함",
+        C: "상대 파악",
+        D: "간단하고 짧게"
+    },
+    {
+        q: "사람들이 당신을 기억하는 방식은?",
+        A: "따뜻함",
+        B: "강렬한 분위기",
+        C: "똑부러짐",
+        D: "조용한 신비로움"
+    },
+    {
+        q: "첫인상에서 가장 중요한 건?",
+        A: "분위기",
+        B: "목소리·자신감",
+        C: "말투·지능미",
+        D: "상대와 거리감"
+    },
+    {
+        q: "처음 만난 사람 앞에서 당신의 감정은?",
+        A: "약간 긴장",
+        B: "흥겨움",
+        C: "분석모드",
+        D: "무감정"
+    },
+    {
+        q: "상대가 당신을 편하게 느끼는 편인가?",
+        A: "웬만하면 다",
+        B: "아니라면 말이 없다",
+        C: "선 넘으면 차갑다",
+        D: "대체로 어렵다고 한다"
+    },
+    {
+        q: "당신이 사람에게 주고 싶은 첫인상은?",
+        A: "친절함",
+        B: "존재감",
+        C: "센스 있는 사람",
+        D: "묵직한 분위기"
+    }
+];
+
+// 결과 정의
+const results = {
+    A: {
+        title: "✨ 첫인상: 따뜻하고 편안한 사람",
+        desc: `당신은 첫 만남에서 <b>편안함·친절함</b>이 가장 먼저 느껴지는 타입입니다.<br><br>
+        상대는 당신을 만나면 속도가 부드럽고 배려심이 느껴지는 사람이라고 생각합니다.
+        처음 보는 사람조차 마음을 열기 쉬워하는 매우 희귀한 ‘호감형 첫인상’입니다.`
+    },
+    B: {
+        title: "🔥 첫인상: 자신감 넘치고 존재감 있는 사람",
+        desc: `당신은 첫 만남에서 <b>자신감·에너지·주도성</b>이 드러나는 스타일입니다.<br><br>
+        상대는 당신이 등장하는 순간 분위기를 리드하는 사람이라고 느끼며,
+        강렬한 매력을 느끼기도 합니다.`
+    },
+    C: {
+        title: "🧠 첫인상: 똑똑하고 분석적인 사람",
+        desc: `당신은 첫 만남에서 <b>이성적·침착·관찰형</b>의 인상을 줍니다.<br><br>
+        사람들은 당신을 쉽게 속일 수 없을 것 같은 느낌을 받으며,
+        차분하고 똑부러지는 스타일이라고 생각합니다.`
+    },
+    D: {
+        title: "🌫 첫인상: 차분하고 신비로운 사람",
+        desc: `<b>말이 많지 않고 잔잔한 분위기</b>를 가져 상대가 궁금해지는 타입입니다.<br><br>
+        미스터리한 매력 덕분에 첫눈에 관심을 끌기도 합니다.
+        말수는 적지만 묵직한 인상을 남기는 특별한 첫인상입니다.`
+    }
+};
+
+window.onload = function() {
+    setTimeout(() => {
+        document.getElementById("loadingScreen").style.display = "none";
+        renderQuestions();
+    }, 1200);
+};
+
+function renderQuestions(){
+    const box = document.getElementById("questionContainer");
+    questions.forEach((item, i) => {
+        let card = document.createElement("div");
+        card.className = "question-card";
+        card.id = "q" + i;
+
+        card.innerHTML = `
+            <h3>${i+1}. ${item.q}</h3>
+            <div class="option" onclick="choose('A')">${item.A}</div>
+            <div class="option" onclick="choose('B')">${item.B}</div>
+            <div class="option" onclick="choose('C')">${item.C}</div>
+            <div class="option" onclick="choose('D')">${item.D}</div>
+        `;
+        box.appendChild(card);
+    });
+    document.getElementById("q0").style.display = "block";
+}
+
+function choose(type){
+    score[type]++;
+    document.getElementById("q"+current).style.display="none";
+    current++;
+
+    if(current < questions.length){
+        document.getElementById("q"+current).style.display="block";
+    } else {
+        showResult();
+    }
+}
+
+function showResult(){
+    let final = Object.keys(score).reduce((a,b)=>score[a]>score[b]?a:b);
+    const r = results[final];
+
+    document.getElementById("resultCard").style.display="block";
+    document.getElementById("resultTitle").innerHTML = r.title;
+    document.getElementById("resultDesc").innerHTML = r.desc;
+}
+
+function restart(){
+    location.reload();
+}
+
+function captureResult(){
+    const area = document.getElementById("resultCard");
+
+    html2canvas(area).then(canvas=>{
+        let link = document.createElement('a');
+        link.download = "result.png";
+        link.href = canvas.toDataURL();
+        link.click();
+    });
+}
+
+</script>
+
+</body>
+</html>
